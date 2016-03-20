@@ -19,13 +19,19 @@ router.get('/get', function (req, res) {
         return;
     } 
     
-    var user = findUserById(req.app.get('db'), userId);
-    if (user === null) {
-        sendError(res);
-        return;
-    }
+    var db = req.app.get('db');
+    findUserById(db, userId, function(user) {
     
-    sendOk(res);
+        if (user === undefined) {
+            sendError(res);
+            return;
+        }
+        
+        findPlaylistsByUserId(db, user.userId, function(playlists) {
+            console.log("findPlaylistsByUserId callback returned");
+        });
+            
+    });
     
 });
 
@@ -38,16 +44,110 @@ router.post('/share', function(req, res) {
         return;
     }
     
-    var user = findUserById(req.app.get('db'), userId);
-    if (user === null) {
-        sendError(res);
-        return;
-    }
+    var db = req.app.get('db');
+    findUserById(db, userId, function(user) {
     
-    var playlist = createSharedPlaylist(req.app.get('db'), userId, playlistId);
-    playlist === null ? sendError(res) : sendOk(res);
+        if (user === null) {
+            sendError(res);
+            return;
+        }
+    
+        createSharedPlaylist(db, userId, playlistId, function(newPlaylist) {
+        
+            if (newPlaylist === null)
+                sendError(res)
+            else
+                sendOk(res);
+        
+        });
+    
+    });
 
 });
+
+function findUserById(db, id, callback) {
+
+    db.users.find({ userId: id }, function (err, users) {    
+    
+        if (err) {
+            console.log("[findUserById] - " + id + " - " + err);
+            callback(undefined);
+        }
+        
+        // Return the first element - there should be only one!
+        if (users.length > 0) {   
+            callback(users[0]);
+            
+        // Insert a new user into the collection
+        } else {
+            createNewUser(db, id, callback);
+        
+        }
+        
+    });
+
+}
+
+function createNewUser(db, id, callback) {
+            
+    var user = { userId: id };
+    db.users.insert(user, function (err, newUser) {  
+    
+        if (err) {
+            console.log("[findUserById] - " + id + " - Failed to create user");
+            callback(null);
+        }
+        
+        console.log("[findUserById] - " + id + " - Created new user!");
+        callback(newUser);
+        
+    });
+
+}
+
+function createSharedPlaylist(db, userId, playlistId, callback) {
+
+    var playlist = { playlistId : playlistId };
+    var userPlaylist = { userId : userId, playlistId : playlistId, isOwner : true };
+    
+    db.playlists.insert(playlist, function (err, newPlaylist) {
+        
+        if (err) {
+            console.log("[createSharedPlaylist] - " + userId + " - Failed to create playlists entry");
+            callback(null);
+            return;
+        }
+        
+        db.userPlaylist.insert(userPlaylist, function (err, newUserPlaylist) {
+        
+            if (err) {
+                console.log("[createSharedPlaylist] - " + userId + " - Failed to create userPlaylist entry");
+                callback(null);
+                // TODO - Get rid of playlists entry - needs to be atomic
+            }
+            
+            console.log("[createSharedPlaylist] - " + userId + " - Created userPlaylist entry");
+            callback(newPlaylist)
+            
+        });
+    
+    });
+}
+
+function findPlaylistsByUserId(db, userId, callback) {
+
+    db.userPlaylist.find( {userId : userId}, function(err, userPlaylists) {
+    
+        if (err) {
+            console.log("[findPlaylistsByUserId] - " + userId + " - Failed to find userPlaylists entries");
+            callback(null);
+        }
+        
+        console.log("[findPlaylistsByUserId] - " + userId + " - Found entries - " + userPlaylists.length);
+        
+    });
+
+}
 
 function sendOk(res) {
     res.sendStatus(200);
@@ -55,69 +155,4 @@ function sendOk(res) {
 
 function sendError(res) {
     res.sendStatus(400);
-}
-
-function findUserById(db, userId) {
-
-    return db.users.find({ userId: userId }, function (err, users) {    
-    
-        if (err) {
-            console.log("GET user - " + userId + " - " + err);
-            return null;
-        }
-        
-        console.log("GET user - " + userId + " - Users found: " + users.length);
-        
-        if (users.length === 0) {        
-        
-            console.log("GET user - " + userId + " - Creating new user...");
-            var user = { userId: userId };
-            return db.users.insert(user, function (err, newUser) {  
-                if (err) return null;
-                console.log("GET user - " + userId + " - Successfully created!");
-                return newUser;
-            });
-            
-        } else {
-        
-            // Return the first element - there should be only one!
-            return users[0];
-            
-        }
-        
-    });
-
-}
-
-function createSharedPlaylist(db, ownerId, playlistId) {
-
-    var playlist = { playlistId : playlistId };
-    var userPlaylist = { ownerId : ownerId, playlistId : playlistId, isOwner : true };
-    
-    return db.playlists.insert(playlist, function (err, newPlaylist) {
-        
-        if (err) {
-            console.log("Create shared playlist - " + ownerId + " - Failed to create playlists entry");
-            return null;
-        }
-        
-        var created = db.userPlaylist.insert(userPlaylist, function (err, newUserPlaylist) {
-        
-            if (err) {
-                console.log("Create shared playlist - " + ownerId + " - Failed to create userPlaylists entry");
-                return null;
-            }
-            
-            console.log("Create shared playlist - " + ownerId + " - Success");
-            return newUserPlaylist;
-            
-        });
-        
-        if (created === null) {
-            return null;
-        } 
-        
-        return newPlaylist;
-    
-    });
 }
