@@ -6,3 +6,17 @@ body {
 a {
   color: #00B7FF;
 }
+
+table {
+  width: 50%;
+}
+
+th, td {
+    border-bottom: 1px solid #ddd; 
+    padding: 2px 5px 5px 5px;
+    text-align: left;
+}
+
+tr:nth-child(odd) {
+  background-color: #f2f2f2
+}
