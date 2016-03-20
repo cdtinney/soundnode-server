@@ -13,6 +13,14 @@ db.playlists = new Datastore({ filename: __dirname + '/db/' + '/playlists.db', a
 db.userPlaylist = new Datastore({ filename: __dirname + '/db/' + '/userPlaylist.db', autoload: true });
 db.invites = new Datastore({ filename: __dirname + '/db/' + '/invites.db', autoload: true });
 
+db.users.ensureIndex({ fieldName: 'userId', unique: true }, function (err) {
+    console.log("Error - cannot insert user with duplicate ID");
+});
+
+db.playlists.ensureIndex({ fieldName: 'playlistId', unique: true }, function (err) {
+    console.log("Error - cannot insert playlist with duplicate ID");
+});
+
 app.set('db', db);
 
 app.listen(config.port, function () {
