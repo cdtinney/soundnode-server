@@ -1,15 +1,37 @@
 var express = require('express'),
   router = express.Router()
-
+  
 module.exports = function (app) {
   app.use('/', router);
 };
 
 router.get('/', function (req, res) {
-    res.render('index', {
-      title: 'SoundNode server'
+    
+    var db = req.app.get('db');
+    getAllCollections(db, function(users, userPlaylists, playlists) {
+    
+        res.render('index', {
+          title: 'SoundNode server',
+          users: users,
+          userPlaylists: userPlaylists,
+          playlists: playlists
+        });
+    
     });
+    
+    
 });
+
+function getAllCollections(db, callback) {
+
+    db.users.find({}, function(err, users) {
+        db.userPlaylist.find({}, function(err, userPlaylists) {            
+            db.playlists.find({}, function(err, playlists) {
+                callback(users, userPlaylists, playlists);
+            });            
+        });        
+    });
+}
 
 router.get('/get', function (req, res) {
 

@@ -1,6 +1,44 @@
 <% include header %>
 
   <h1><%-title %></h1>
-  <p>Welcome to <%-title %></p>
+  
+  <ul>
+  </ul>
+  
+  <h2>Users</h2>
+  <table>
+    <tr><th>UserId</th></tr>
+    <% users.forEach(function(user) { %>
+      <tr>      
+        <td><%= user.userId %></td>
+      </tr>
+    <% }); %>
+  </table>
+  
+  <h2>Playlists</h2>
+  <table>
+    <tr><th>PlaylistId</th></tr>
+    <% playlists.forEach(function(playlist) { %>
+      <tr>      
+        <td><%= playlist.playlistId %></td>
+      </tr>
+    <% }); %>
+  </table>
+  
+  <h2>UserPlaylist</h2>
+  <table>
+    <tr>
+      <th>UserId</th>
+      <th>PlaylistId</th>
+      <th>isOwner</th>
+    </tr>
+    <% userPlaylists.forEach(function(userPlaylist) { %>
+      <tr>      
+        <td><%= userPlaylist.userId %></td>
+        <td><%= userPlaylist.playlistId %></td>
+        <td><%= userPlaylist.isOwner %></td>
+      </tr>
+    <% }); %>
+  </table>
 
 <% include footer %>
