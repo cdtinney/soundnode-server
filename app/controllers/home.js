@@ -87,6 +87,37 @@ router.post('/share', function(req, res) {
 
 });
 
+router.post('/unshare', function(req, res) {
+
+    // TODO - Fix duplicate paramater validation (share, unshare)
+    var userId = req.query.userId;
+    var playlistId = req.query.playlistId;    
+    if (userId == undefined || playlistId == undefined) {
+        sendError(res, "User and playlist IDs not specified");
+        return;
+    }
+    
+    var db = req.app.get('db');
+    findUserById(db, userId, function(user) {
+    
+        if (user === null) {
+            sendError(res, "Failed to find user");
+            return;
+        }
+    
+        removeSharedPlaylist(db, userId, playlistId, function(numRemoved) {
+        
+            if (numRemoved === null || numRemoved === 0)
+                sendError(res, "Failed to removed shared playlist");
+            else
+                sendOk(res, { numRemoved: numRemoved });
+        
+        });
+    
+    });
+
+});
+
 function findUserById(db, id, callback) {
 
     db.users.find({ userId: id }, function (err, users) {    
@@ -156,6 +187,37 @@ function createSharedPlaylist(db, userId, playlistId, callback) {
     });
 }
 
+function removeSharedPlaylist(db, userId, playlistId, callback) {
+
+    // Remove UserPlaylist entries
+    db.userPlaylist.remove( { playlistId: playlistId }, { multi: true }, function(err, numRemoved) {
+        
+        if (err || numRemoved === 0) {
+            console.log("[removeSharedPlaylist] - playlistId: " + playlistId + " - Failed to remove UserPlaylist entries");
+            callback(null);
+            return;        
+        }
+        
+        console.log("[removeSharedPlaylist] - playlistId: " + playlistId + " - Removed UserPlaylist entries: " + numRemoved);
+        
+        // Remove Playlists entry
+        db.playlists.remove( { playlistId: playlistId }, {}, function(err, numRemoved) {
+        
+            if (err || numRemoved === 0) {
+                console.log("[removeSharedPlaylist] - playlistId: " + playlistId + " - Failed to remove playlists entry");
+                callback(null);
+                return;  
+            }
+            
+            console.log("[removeSharedPlaylist] - playlistId: " + playlistId + " - Removed playlist entry: " + numRemoved);
+            callback(numRemoved);
+        
+        });
+        
+    });
+    
+}
+
 function findPlaylistsByUserId(db, userId, callback) {
 
     db.userPlaylist.find( {userId : userId}, function(err, userPlaylists) {
@@ -175,7 +237,7 @@ function findPlaylistsByUserId(db, userId, callback) {
 function sendOk(res, obj) {
 
     if (obj !== undefined) {
-        res.send(obj);
+        res.status(200).json(obj);
     } else {
         res.sendStatus(200);
     }
