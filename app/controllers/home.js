@@ -37,7 +37,7 @@ router.get('/get', function (req, res) {
 
     var userId = req.query.userId;    
     if (userId === undefined) {
-        sendError(res);
+        sendError(res, "User ID not specified");
         return;
     } 
     
@@ -45,12 +45,12 @@ router.get('/get', function (req, res) {
     findUserById(db, userId, function(user) {
     
         if (user === undefined) {
-            sendError(res);
+            sendError(res, "Failed to find user");
             return;
         }
         
         findPlaylistsByUserId(db, user.userId, function(playlists) {
-            console.log("findPlaylistsByUserId callback returned");
+            sendOk(res, playlists);            
         });
             
     });
@@ -62,7 +62,7 @@ router.post('/share', function(req, res) {
     var userId = req.query.userId;
     var playlistId = req.query.playlistId;    
     if (userId == undefined || playlistId == undefined) {
-        sendError(res);
+        sendError(res, "User and playlist IDs not specified");
         return;
     }
     
@@ -70,16 +70,16 @@ router.post('/share', function(req, res) {
     findUserById(db, userId, function(user) {
     
         if (user === null) {
-            sendError(res);
+            sendError(res, "Failed to find user");
             return;
         }
     
         createSharedPlaylist(db, userId, playlistId, function(newPlaylist) {
         
             if (newPlaylist === null)
-                sendError(res)
+                sendError(res, "Failed to create shared playlist");
             else
-                sendOk(res);
+                sendOk(res, newPlaylist);
         
         });
     
@@ -166,15 +166,22 @@ function findPlaylistsByUserId(db, userId, callback) {
         }
         
         console.log("[findPlaylistsByUserId] - " + userId + " - Found entries - " + userPlaylists.length);
+        callback(userPlaylists);
         
     });
 
 }
 
-function sendOk(res) {
-    res.sendStatus(200);
+function sendOk(res, obj) {
+
+    if (obj !== undefined) {
+        res.send(obj);
+    } else {
+        res.sendStatus(200);
+    }
+    
 }
 
-function sendError(res) {
-    res.sendStatus(400);
+function sendError(res, message) {
+    res.status(400).json({ error: message })
 }
