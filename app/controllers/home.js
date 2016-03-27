@@ -36,13 +36,14 @@ function getAllCollections(db, callback) {
 router.get('/get', function (req, res) {
 
     var userId = req.query.userId;    
+    var userName = req.query.userName;
     if (userId === undefined) {
         sendError(res, "User ID not specified");
         return;
     } 
     
     var db = req.app.get('db');
-    findUserById(db, userId, function(user) {
+    findOrCreateUserById(db, userId, userName, function(user) {
     
         if (user === undefined) {
             sendError(res, "Failed to find user");
@@ -60,6 +61,7 @@ router.get('/get', function (req, res) {
 router.post('/share', function(req, res) {
 
     var userId = req.query.userId;
+    var userName = req.query.userName;
     var playlistId = req.query.playlistId;    
     if (userId == undefined || playlistId == undefined) {
         sendError(res, "User and playlist IDs not specified");
@@ -67,7 +69,7 @@ router.post('/share', function(req, res) {
     }
     
     var db = req.app.get('db');
-    findUserById(db, userId, function(user) {
+    findOrCreateUserById(db, userId, userName, function(user) {
     
         if (user === null) {
             sendError(res, "Failed to find user");
@@ -91,6 +93,7 @@ router.post('/unshare', function(req, res) {
 
     // TODO - Fix duplicate paramater validation (share, unshare)
     var userId = req.query.userId;
+    var userName = req.query.userName;
     var playlistId = req.query.playlistId;    
     if (userId == undefined || playlistId == undefined) {
         sendError(res, "User and playlist IDs not specified");
@@ -98,7 +101,7 @@ router.post('/unshare', function(req, res) {
     }
     
     var db = req.app.get('db');
-    findUserById(db, userId, function(user) {
+    findOrCreateUserById(db, userId, userName, function(user) {
     
         if (user === null) {
             sendError(res, "Failed to find user");
@@ -118,12 +121,12 @@ router.post('/unshare', function(req, res) {
 
 });
 
-function findUserById(db, id, callback) {
+function findOrCreateUserById(db, id, userName, callback) {
 
     db.users.find({ userId: id }, function (err, users) {    
     
         if (err) {
-            console.log("[findUserById] - " + id + " - " + err);
+            console.log("[findOrCreateUserById] - " + id + " - " + err);
             callback(undefined);
         }
         
@@ -133,7 +136,7 @@ function findUserById(db, id, callback) {
             
         // Insert a new user into the collection
         } else {
-            createNewUser(db, id, callback);
+            createNewUser(db, id, userName, callback);
         
         }
         
@@ -141,17 +144,17 @@ function findUserById(db, id, callback) {
 
 }
 
-function createNewUser(db, id, callback) {
+function createNewUser(db, id, userName, callback) {
             
-    var user = { userId: id };
+    var user = { userId: id, userName: userName};
     db.users.insert(user, function (err, newUser) {  
     
         if (err) {
-            console.log("[findUserById] - " + id + " - Failed to create user");
+            console.log("[findOrCreateUserById] - " + id + " - Failed to create user");
             callback(null);
         }
         
-        console.log("[findUserById] - " + id + " - Created new user!");
+        console.log("[findOrCreateUserById] - " + id + " - Created new user - " + userName);
         callback(newUser);
         
     });
