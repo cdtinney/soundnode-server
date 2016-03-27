@@ -58,6 +58,28 @@ router.get('/get', function (req, res) {
     
 });
 
+router.get('/users', function (req, res) {
+
+    var playlistId = req.query.playlistId;    
+    if (playlistId === undefined) {
+        sendError(res, "Playlist ID not specified");
+        return;
+    } 
+    
+    var db = req.app.get('db');
+    getPlaylistUsers(db, playlistId, function(users) {
+    
+        if (users === undefined) {
+            sendError(res, "Failed to find users for playlist - " + playlistId);
+            return;
+        }
+        
+        sendOk(res, users);            
+            
+    });
+    
+});
+
 router.post('/share', function(req, res) {
 
     var userId = req.query.userId;
@@ -219,6 +241,49 @@ function removeSharedPlaylist(db, userId, playlistId, callback) {
         
     });
     
+}
+
+function getPlaylistUsers(db, playlistId, callback) {
+
+    db.userPlaylist.find( {playlistId : playlistId}, function(err, userPlaylists) {
+    
+        if (err) {
+            console.log("[getPlaylistUsers] - " + playlistId + " - Failed to find userPlaylists entries");
+            callback(null);
+        }
+        
+        console.log("[getPlaylistUsers] - " + playlistId + " - Found entries - " + userPlaylists.length);
+        
+        var userIds = getUniqueUserIds(userPlaylists);        
+        db.users.find({ userId: { $in: userIds }}, function (err, users) {
+    
+            if (err) {
+                console.log("[getPlaylistUsers] - " + playlistId + " - Failed to find user entries");
+                callback(null);
+            }
+            
+            callback(users);
+          
+        })        
+        
+    });
+
+}
+
+function getUniqueUserIds(userPlaylists) {
+
+    var obj = {};
+    for (var i=0; i<userPlaylists.length; i++) {
+        obj[userPlaylists[i].userId] = userPlaylists[i].userId;
+    }
+    
+    var arr = [];
+    for (id in obj) {
+        arr.push(id);
+    }
+    
+    return arr;
+
 }
 
 function findPlaylistsByUserId(db, userId, callback) {
