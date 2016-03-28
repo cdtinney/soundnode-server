@@ -80,6 +80,37 @@ router.get('/users', function (req, res) {
     
 });
 
+router.post('/users/add', function (req, res) {
+
+    var userId = req.query.userId;    
+    var userName = req.query.userName;    
+    var playlistId = req.query.playlistId;    
+    if (userId === undefined || playlistId === undefined) {
+        sendError(res, "User or Playlist ID not specified");
+        return;
+    } 
+    
+    var db = req.app.get('db');
+    findOrCreateUserById(db, userId, userName, function(user) {
+    
+        if (user === null) {
+            sendError(res, "Failed to find/create user");
+            return;
+        }
+    
+        addUserToPlaylist(db, userId, userName, playlistId, function(userPlaylist) {
+        
+            if (userPlaylist === null)
+                sendError(res, "Failed to add user to shared playlist");
+            else
+                sendOk(res, userPlaylist);
+        
+        });
+    
+    });
+    
+});
+
 router.post('/share', function(req, res) {
 
     var userId = req.query.userId;
@@ -243,6 +274,52 @@ function removeSharedPlaylist(db, userId, playlistId, callback) {
     
 }
 
+function addUserToPlaylist(db, userId, userName, playlistId, callback) {
+
+    // First, check if the playlist exists
+    db.playlists.find( {playlistId : playlistId}, function(err, playlist) {
+    
+        if (err) {
+            console.log("[addUserToPlaylist] - " + playlistId + " - Failed to find playlist");
+            callback(null);                 
+            return; 
+        }
+        
+        // Then, check if the user is already added
+        db.userPlaylist.find( {$and: [{userId : userId}, {playlistId : playlistId}] }, function(err, existingUserPlaylists) {
+            
+            if (err) {
+                console.log("[addUserToPlaylist] - " + playlistId + " - Failed to query UserPlaylist database");
+                callback(null);               
+                return;
+            }
+            
+            if (existingUserPlaylists !== undefined && existingUserPlaylists.length > 0) {
+                console.log("[addUserToPlaylist] - " + playlistId + " - User already added - " + userName);
+                callback("User already added to playlist");              
+                return;
+            }
+            
+            var userPlaylist = { userId : userId, playlistId : playlistId, isOwner : false };
+            db.userPlaylist.insert(userPlaylist, function (err, newUserPlaylist) {
+            
+                if (err) {
+                    console.log("[createSharedPlaylist] - " + userId + " - Failed to create userPlaylist entry - " + userName);
+                    callback(null);   
+                    return;
+                }
+                
+                console.log("[createSharedPlaylist] - " + userId + " - Created userPlaylist entry - " + userName);
+                callback(newUserPlaylist)
+                
+            });
+        
+        });
+    
+    });
+
+}
+
 function getPlaylistUsers(db, playlistId, callback) {
 
     db.userPlaylist.find( {playlistId : playlistId}, function(err, userPlaylists) {
@@ -250,9 +327,10 @@ function getPlaylistUsers(db, playlistId, callback) {
         if (err) {
             console.log("[getPlaylistUsers] - " + playlistId + " - Failed to find userPlaylists entries");
             callback(null);
+            return;
         }
         
-        console.log("[getPlaylistUsers] - " + playlistId + " - Found entries - " + userPlaylists.length);
+        console.log("[getPlaylistUsers] - " + playlistId + " - Found entries in UserPlaylist - " + userPlaylists.length);
         
         var userIds = getUniqueUserIds(userPlaylists);        
         db.users.find({ userId: { $in: userIds }}, function (err, users) {
@@ -260,6 +338,7 @@ function getPlaylistUsers(db, playlistId, callback) {
             if (err) {
                 console.log("[getPlaylistUsers] - " + playlistId + " - Failed to find user entries");
                 callback(null);
+                return;
             }
             
             callback(users);
