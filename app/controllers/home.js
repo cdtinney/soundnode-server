@@ -80,7 +80,7 @@ router.get('/users', function (req, res) {
     
 });
 
-router.post('/users/add', function (req, res) {
+router.post('/playlists/users/add', function (req, res) {
 
     var userId = req.query.userId;    
     var userName = req.query.userName;    
@@ -111,6 +111,29 @@ router.post('/users/add', function (req, res) {
     
 });
 
+router.delete('/playlists/users', function (req, res) {
+
+    var userId = req.query.userId;    
+    var playlistId = req.query.playlistId;    
+    if (userId === undefined || playlistId === undefined) {
+        sendError(res, "User or Playlist ID not specified");
+        return;
+    } 
+    
+    var db = req.app.get('db');
+    removeUserFromPlaylist(db, userId, playlistId, function(response) {
+    
+        if (response === null) {
+            sendError(res, "Failed to remove user from playlist");
+            return;
+        }
+        
+        sendOk(res, response);    
+    
+    });
+    
+});
+
 router.post('/share', function(req, res) {
 
     var userId = req.query.userId;
@@ -134,7 +157,7 @@ router.post('/share', function(req, res) {
             if (newPlaylist === null)
                 sendError(res, "Failed to create shared playlist");
             else
-                sendOk(res, newPlaylist);
+                sendOk(res, userPlaylist);
         
         });
     
@@ -286,7 +309,7 @@ function addUserToPlaylist(db, userId, userName, playlistId, callback) {
         }
         
         // Then, check if the user is already added
-        db.userPlaylist.find( {$and: [{userId : userId}, {playlistId : playlistId}] }, function(err, existingUserPlaylists) {
+        db.userPlaylist.find( { $and: [{userId : userId}, {playlistId : playlistId}] }, function(err, existingUserPlaylists) {
             
             if (err) {
                 console.log("[addUserToPlaylist] - " + playlistId + " - Failed to query UserPlaylist database");
@@ -315,6 +338,23 @@ function addUserToPlaylist(db, userId, userName, playlistId, callback) {
             });
         
         });
+    
+    });
+
+}
+
+function removeUserFromPlaylist(db, userId, playlistId, callback) {
+
+    db.userPlaylist.remove( {$and: [{userId: userId}, {playlistId: playlistId}] }, {}, function(err, numRemoved) {
+    
+        if (err) {
+            console.log("[removeUserFromPlaylist] - Failed to remove user from UserPlaylist database");
+            callback(null);               
+            return;        
+        }
+        
+        console.log("[removeUserFromPlaylist] - Removed entries from UserPlaylist database - " + numRemoved);
+        callback(numRemoved);
     
     });
 
