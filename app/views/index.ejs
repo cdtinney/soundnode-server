@@ -52,6 +52,7 @@
       <th>PlaylistId</th>
       <th>UserId</th>
       <th>RequestType</th>
+      <th>Status</th>
     </tr>
     <% trackRequests.forEach(function(trackRequest) { %>
       <tr>      
@@ -59,6 +60,7 @@
         <td><%= trackRequest.playlistId %></td>
         <td><%= trackRequest.userId %></td>
         <td><%= trackRequest.requestType %></td>
+        <td><%= trackRequest.status %></td>
       </tr>
     <% }); %>
   </table>

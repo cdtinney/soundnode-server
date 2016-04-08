@@ -103,6 +103,29 @@ router.get('/playlists/tracks', function(req, res) {
 
 });
 
+router.post('/playlists/tracks/status', function(req, res) {
+
+    var userId = req.query.userId;    
+    var trackId = req.query.trackId;
+    var playlistId = req.query.playlistId;    
+    var status = req.query.status;
+    if (trackId === undefined || userId === undefined || playlistId === undefined || status === undefined) {
+        sendError(res, "userId/trackId/playlistId/status not specified");
+        return;
+    } 
+    
+    var db = req.app.get('db');
+    updateTrackRequestStatus(db, userId, trackId, playlistId, status, function(response) {
+    
+        if (response === null)
+            sendError(res, "Failed to update track request status");
+        else
+            sendOk(res, response);
+    
+    });
+
+});
+
 router.post('/playlists/tracks/add', function(req, res) {
 
     var userId = req.query.userId;    
@@ -344,10 +367,11 @@ function removeSharedPlaylist(db, userId, playlistId, callback) {
 
 function getTrackRequests(db, playlistId, callback) {
 
-    db.trackRequest.find( {playlistId : playlistId}, function(err, trackRequests) {
+    db.trackRequest.find(  { $and: [{status : "pending"}, {playlistId : playlistId}] }, function(err, trackRequests) {
 
         if (err) {
             console.log("[getTrackRequests] - " + playlistId + " - Failed to find track requests");
+            console.log(err);
             callback(null);                 
             return; 
         }
@@ -360,7 +384,6 @@ function getTrackRequests(db, playlistId, callback) {
 
 function addTrackToPlaylist(db, userId, trackId, playlistId, callback) {
 
-    // First, check if the playlist exists
     db.playlists.find( {playlistId : playlistId}, function(err, playlist) {
     
         if (err) {
@@ -369,11 +392,12 @@ function addTrackToPlaylist(db, userId, trackId, playlistId, callback) {
             return; 
         }
         
-        var trackRequest = { trackId : trackId, playlistId : playlistId, userId : userId, requestType : "add" };
+        var trackRequest = { trackId : trackId, playlistId : playlistId, userId : userId, requestType : "add", status : "pending" };
         db.trackRequest.insert(trackRequest, function (err, newTrackRequest) {
         
             if (err) {
                 console.log("[addTrackToPlaylist] - " + trackId + " - Failed to add track request");
+                console.log(err);
                 callback(null);   
                 return;
             }
@@ -384,6 +408,35 @@ function addTrackToPlaylist(db, userId, trackId, playlistId, callback) {
         });
         
     });
+
+}
+
+function updateTrackRequestStatus(db, userId, trackId, playlistId, status, callback) {
+    
+    db.playlists.find( {playlistId : playlistId}, function(err, playlist) {
+
+        if (err) {
+            console.log("[addUserToPlaylist] - " + playlistId + " - Failed to find playlist");
+            callback(null);                 
+            return; 
+        }
+        
+        db.trackRequest.update({ trackId: trackId }, { $set: { status: status } }, { multi: false }, function (err, numUpdated) {
+        
+            if (err || numUpdated === 0) {
+                console.log("[updateTrackRequestStatus] - " + trackId + " - Failed to add update track request");
+                console.log(err);
+                callback(null);   
+                return;
+            }
+            
+            console.log("[updateTrackRequestStatus] - " + trackId + " - Successfully updated track request - " + status);
+            callback(numUpdated);
+            
+        });
+        
+    });
+
 
 }
 
