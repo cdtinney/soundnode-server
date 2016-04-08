@@ -8,13 +8,14 @@ module.exports = function (app) {
 router.get('/', function (req, res) {
     
     var db = req.app.get('db');
-    getAllCollections(db, function(users, userPlaylists, playlists) {
+    getAllCollections(db, function(users, userPlaylists, playlists, trackRequests) {
     
         res.render('index', {
           title: 'SoundNode server',
           users: users,
           userPlaylists: userPlaylists,
-          playlists: playlists
+          playlists: playlists,
+          trackRequests: trackRequests
         });
     
     });
@@ -26,8 +27,10 @@ function getAllCollections(db, callback) {
 
     db.users.find({}, function(err, users) {
         db.userPlaylist.find({}, function(err, userPlaylists) {            
-            db.playlists.find({}, function(err, playlists) {
-                callback(users, userPlaylists, playlists);
+            db.playlists.find({}, function(err, playlists) {       
+                db.trackRequest.find({}, function(err, trackRequests) {
+                    callback(users, userPlaylists, playlists, trackRequests);
+                });            
             });            
         });        
     });
@@ -78,6 +81,28 @@ router.get('/users', function (req, res) {
             
     });
     
+});
+
+router.post('/playlists/tracks/add', function(req, res) {
+
+    var userId = req.query.userId;    
+    var trackId = req.query.trackId;
+    var playlistId = req.query.playlistId;    
+    if (trackId === undefined || userId === undefined || playlistId === undefined) {
+        sendError(res, "userId/trackId/playlistId not specified");
+        return;
+    } 
+    
+    var db = req.app.get('db');
+    addTrackToPlaylist(db, userId, trackId, playlistId, function(response) {
+    
+        if (response === null)
+            sendError(res, "Failed to add track to shared playlist");
+        else
+            sendOk(res, response);
+    
+    });
+
 });
 
 router.post('/playlists/users/add', function (req, res) {
@@ -295,6 +320,35 @@ function removeSharedPlaylist(db, userId, playlistId, callback) {
         
     });
     
+}
+
+function addTrackToPlaylist(db, userId, trackId, playlistId, callback) {
+
+    // First, check if the playlist exists
+    db.playlists.find( {playlistId : playlistId}, function(err, playlist) {
+    
+        if (err) {
+            console.log("[addUserToPlaylist] - " + playlistId + " - Failed to find playlist");
+            callback(null);                 
+            return; 
+        }
+        
+        var trackRequest = { trackId : trackId, playlistId : playlistId, userId : userId, requestType : "add" };
+        db.trackRequest.insert(trackRequest, function (err, newTrackRequest) {
+        
+            if (err) {
+                console.log("[addTrackToPlaylist] - " + trackId + " - Failed to add track request");
+                callback(null);   
+                return;
+            }
+            
+            console.log("[addTrackToPlaylist] - " + trackId + " - Successfully added track request");
+            callback(newTrackRequest)
+            
+        });
+        
+    });
+
 }
 
 function addUserToPlaylist(db, userId, userName, playlistId, callback) {

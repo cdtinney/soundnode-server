@@ -7,10 +7,14 @@
   
   <h2>Users</h2>
   <table>
-    <tr><th>UserId</th></tr>
+    <tr>
+      <th>UserId</th>
+      <th>Username</th>
+    </tr>
     <% users.forEach(function(user) { %>
       <tr>      
         <td><%= user.userId %></td>
+        <td><%= user.userName %></td>
       </tr>
     <% }); %>
   </table>
@@ -37,6 +41,24 @@
         <td><%= userPlaylist.userId %></td>
         <td><%= userPlaylist.playlistId %></td>
         <td><%= userPlaylist.isOwner %></td>
+      </tr>
+    <% }); %>
+  </table>
+  
+  <h2>TrackRequest</h2>
+  <table>
+    <tr>
+      <th>TrackId</th>
+      <th>PlaylistId</th>
+      <th>UserId</th>
+      <th>RequestType</th>
+    </tr>
+    <% trackRequests.forEach(function(trackRequest) { %>
+      <tr>      
+        <td><%= trackRequest.trackId %></td>
+        <td><%= trackRequest.playlistId %></td>
+        <td><%= trackRequest.userId %></td>
+        <td><%= trackRequest.requestType %></td>
       </tr>
     <% }); %>
   </table>

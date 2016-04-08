@@ -11,7 +11,7 @@ var db = {}
 db.users = new Datastore({ filename: __dirname + '/db/' + '/users.db', autoload: true });
 db.playlists = new Datastore({ filename: __dirname + '/db/' + '/playlists.db', autoload: true });
 db.userPlaylist = new Datastore({ filename: __dirname + '/db/' + '/userPlaylist.db', autoload: true });
-db.invites = new Datastore({ filename: __dirname + '/db/' + '/invites.db', autoload: true });
+db.trackRequest = new Datastore({ filename: __dirname + '/db/' + '/trackRequest.db', autoload: true });
 
 db.users.ensureIndex({ fieldName: 'userId', unique: true }, function (err) {
     console.log("Error - cannot insert user with duplicate ID");
@@ -19,6 +19,10 @@ db.users.ensureIndex({ fieldName: 'userId', unique: true }, function (err) {
 
 db.playlists.ensureIndex({ fieldName: 'playlistId', unique: true }, function (err) {
     console.log("Error - cannot insert playlist with duplicate ID");
+});
+
+db.trackRequest.ensureIndex({ fieldName: 'trackId', unique: true }, function (err) {
+    console.log("Error - cannot insert track request with duplicate track ID");
 });
 
 app.set('db', db);
