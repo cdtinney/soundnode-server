@@ -5,3 +5,4 @@ public/components
 /db/playlists.db
 /db/userPlaylist.db
 /db/users.db
+/db/*.db
