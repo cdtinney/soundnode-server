@@ -157,7 +157,7 @@ router.post('/share', function(req, res) {
             if (newPlaylist === null)
                 sendError(res, "Failed to create shared playlist");
             else
-                sendOk(res, userPlaylist);
+                sendOk(res, newPlaylist);
         
         });
     
