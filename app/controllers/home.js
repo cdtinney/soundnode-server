@@ -83,6 +83,26 @@ router.get('/users', function (req, res) {
     
 });
 
+router.get('/playlists/tracks', function(req, res) {
+
+    var playlistId = req.query.playlistId;    
+    if (playlistId === undefined) {
+        sendError(res, "playlistId not specified");
+        return;
+    } 
+    
+    var db = req.app.get('db');
+    getTrackRequests(db, playlistId, function(trackRequests) {
+    
+        if (trackRequests === null)
+            sendError(res, "Failed to retrieve track requests");
+        else
+            sendOk(res, trackRequests);
+    
+    });
+
+});
+
 router.post('/playlists/tracks/add', function(req, res) {
 
     var userId = req.query.userId;    
@@ -320,6 +340,22 @@ function removeSharedPlaylist(db, userId, playlistId, callback) {
         
     });
     
+}
+
+function getTrackRequests(db, playlistId, callback) {
+
+    db.trackRequest.find( {playlistId : playlistId}, function(err, trackRequests) {
+
+        if (err) {
+            console.log("[getTrackRequests] - " + playlistId + " - Failed to find track requests");
+            callback(null);                 
+            return; 
+        }
+
+        callback(trackRequests);
+    
+    });
+
 }
 
 function addTrackToPlaylist(db, userId, trackId, playlistId, callback) {
