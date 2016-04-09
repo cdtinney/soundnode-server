@@ -172,6 +172,50 @@ router.post('/playlists/tracks/remove', function(req, res) {
 
 });
 
+router.get('/playlists/tracks/listen', function(req, res) {
+
+    var userId = req.query.userId;    
+    var playlistId = req.query.playlistId;    
+    if (userId === undefined || playlistId === undefined) {
+        sendError(res, "userId/playlistId not specified");
+        return;
+    } 
+    
+    var db = req.app.get('db');
+    getTracksListened(db, userId, playlistId, function(response) {
+    
+        if (response === null)
+            sendError(res, "Failed to retrieve listened tracks");
+        else
+            sendOk(res, response);
+    
+    });
+
+});
+
+router.post('/playlists/tracks/listen', function(req, res) {
+
+    var userId = req.query.userId;    
+    var trackId = req.query.trackId;
+    var playlistId = req.query.playlistId;    
+    var listened = req.query.listened;
+    if (trackId === undefined || userId === undefined || playlistId === undefined || listened === undefined) {
+        sendError(res, "userId/trackId/playlistId/listened not specified");
+        return;
+    } 
+    
+    var db = req.app.get('db');
+    setTrackListened(db, userId, trackId, playlistId, listened, function(response) {
+    
+        if (response === null)
+            sendError(res, "Failed to update track listened status");
+        else
+            sendOk(res, response);
+    
+    });
+
+});
+
 /* TODO - switch to PUT */
 router.post('/playlists/users/add', function (req, res) {
 
@@ -506,6 +550,55 @@ function updateTrackRequestStatus(db, userId, trackId, playlistId, status, callb
             
         });
         
+    });
+
+}
+
+function getTracksListened(db, userId, playlistId, callback) {
+
+    var trackListen = {
+        userId : userId,
+        playlistId : playlistId
+    };
+    
+    db.trackListen.find(  { $and: [{userId : userId }, {playlistId : playlistId}, {listened : "true" }] }, function(err, trackListens) {
+    
+        if (err || trackListens === undefined) {
+            console.log("[getTracksListened] - " + playlistId + " - Failed to find track listens");
+            console.log(err);
+            callback(null);   
+            return;
+        }
+        
+        console.log("[getTracksListened] - " + playlistId + " - Successfully retrieved track listens - " + trackListens.length);
+        callback(trackListens);
+    
+    });
+
+}
+
+function setTrackListened(db, userId, trackId, playlistId, listened, callback) {
+
+    var trackListen = {
+        userId : userId,
+        trackId : trackId,
+        playlistId : playlistId,
+        listened :  listened          
+    };
+    
+    db.trackListen.update(  { $and: [{userId : userId }, {trackId : trackId}, {playlistId : playlistId}] },  
+        trackListen, { upsert: true}, function(err, newTrackListen) {
+    
+        if (err || newTrackListen === undefined) {
+            console.log("[setTrackListened] - " + trackId + " - Failed to update track listen");
+            console.log(err);
+            callback(null);   
+            return;
+        }
+        
+        console.log("[setTrackListened] - " + trackId + " - Successfully updated track listen!");
+        callback(newTrackListen);
+    
     });
 
 }

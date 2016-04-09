@@ -12,6 +12,7 @@ db.users = new Datastore({ filename: __dirname + '/db/' + '/users.db', autoload:
 db.playlists = new Datastore({ filename: __dirname + '/db/' + '/playlists.db', autoload: true });
 db.userPlaylist = new Datastore({ filename: __dirname + '/db/' + '/userPlaylist.db', autoload: true });
 db.trackRequest = new Datastore({ filename: __dirname + '/db/' + '/trackRequest.db', autoload: true });
+db.trackListen = new Datastore({ filename: __dirname + '/db/' + '/trackListen.db', autoload: true });
 
 db.users.ensureIndex({ fieldName: 'userId', unique: true }, function (err) {
     console.log("Error - cannot insert user with duplicate ID");
