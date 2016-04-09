@@ -355,9 +355,20 @@ function removeSharedPlaylist(db, userId, playlistId, callback) {
                 callback(null);
                 return;  
             }
+        
+            // Remove TrackRequest entries
+            db.trackRequest.remove( { playlistId: playlistId }, {}, function(err, numRemoved) {
             
-            console.log("[removeSharedPlaylist] - playlistId: " + playlistId + " - Removed playlist entry: " + numRemoved);
-            callback(numRemoved);
+                if (err || numRemoved === 0) {
+                    console.log("[removeSharedPlaylist] - playlistId: " + playlistId + " - Failed to remove trackRequest entries");
+                    callback(null);
+                    return;  
+                }
+                
+                console.log("[removeSharedPlaylist] - playlistId: " + playlistId + " - Removed trackRequest entries: " + numRemoved);
+                callback(numRemoved);
+            
+            });
         
         });
         
@@ -436,7 +447,6 @@ function updateTrackRequestStatus(db, userId, trackId, playlistId, status, callb
         });
         
     });
-
 
 }
 
