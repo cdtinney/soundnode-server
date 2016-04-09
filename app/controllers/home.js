@@ -103,6 +103,7 @@ router.get('/playlists/tracks', function(req, res) {
 
 });
 
+/* TODO - remove /status */
 router.post('/playlists/tracks/status', function(req, res) {
 
     var userId = req.query.userId;    
@@ -126,6 +127,7 @@ router.post('/playlists/tracks/status', function(req, res) {
 
 });
 
+/* TODO - switch to PUT */
 router.post('/playlists/tracks/add', function(req, res) {
 
     var userId = req.query.userId;    
@@ -140,7 +142,7 @@ router.post('/playlists/tracks/add', function(req, res) {
     addTrackToPlaylist(db, userId, trackId, playlistId, function(response) {
     
         if (response === null)
-            sendError(res, "Failed to add track to shared playlist");
+            sendError(res, "Failed to add track (via request) to shared playlist");
         else
             sendOk(res, response);
     
@@ -148,6 +150,29 @@ router.post('/playlists/tracks/add', function(req, res) {
 
 });
 
+router.post('/playlists/tracks/remove', function(req, res) {
+
+    var userId = req.query.userId;    
+    var trackId = req.query.trackId;
+    var playlistId = req.query.playlistId;    
+    if (trackId === undefined || userId === undefined || playlistId === undefined) {
+        sendError(res, "userId/trackId/playlistId not specified");
+        return;
+    } 
+    
+    var db = req.app.get('db');
+    removeTrackFromPlaylist(db, userId, trackId, playlistId, function(response) {
+    
+        if (response === null)
+            sendError(res, "Failed to remove track (via request) from shared playlist");
+        else
+            sendOk(res, response);
+    
+    });
+
+});
+
+/* TODO - switch to PUT */
 router.post('/playlists/users/add', function (req, res) {
 
     var userId = req.query.userId;    
@@ -416,6 +441,41 @@ function addTrackToPlaylist(db, userId, trackId, playlistId, callback) {
             console.log("[addTrackToPlaylist] - " + trackId + " - Successfully added track request");
             callback(newTrackRequest)
             
+        });
+        
+    });
+
+}
+
+function removeTrackFromPlaylist(db, userId, trackId, playlistId, callback) {
+
+    db.playlists.find( {playlistId : playlistId}, function(err, playlist) {
+    
+        if (err) {
+            console.log("[removeTrackFromPlaylist] - " + playlistId + " - Failed to find playlist");
+            callback(null);                 
+            return; 
+        }
+        
+        var trackRequest = {
+            trackId : trackId,
+            playlistId : playlistId,
+            userId : userId,
+            requestType : "remove",
+            status : "pending"            
+        };
+        db.trackRequest.update(  { $and: [{trackId : trackId}, {playlistId : playlistId}] },  trackRequest, { upsert: true}, function(err, newRequest) {
+        
+            if (err || newRequest === undefined) {
+                console.log("[removeTrackFromPlaylist] - " + trackId + " - Failed to update track request");
+                console.log(err);
+                callback(null);   
+                return;
+            }
+            
+            console.log("[removeTrackFromPlaylist] - " + trackId + " - Successfully updated track request!");
+            callback(newRequest);
+        
         });
         
     });
